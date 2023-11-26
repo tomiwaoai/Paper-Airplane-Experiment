@@ -1,0 +1,210 @@
+---
+title: '2'
+  author: "STAT 5080 Paper Airplane Experiment"
+date: "4/14/2022"
+output: html_document
+---
+
+```{r}
+rm(list=ls())
+```
+
+```{r}
+# 1 Data entry
+
+Distance = c(44.4, 21.96, 38.79, 28.48, 35, 27.69, 10, 14.48, 11.25, 13.58, 9.5, 14.12, 39.14, 28.75, 36.2, 36.94, 34.15, 33.75, 17.08, 28.32, 14.71, 25.02, 20.46, 33.27)
+
+Block = (rep(rep(c("Ashra", "Daniel", "Mehmet"),each=2),4))
+
+PlaneType = rep(rep(c("Basic Dart", "Stable"),each =6),2)
+
+PaperType = rep(c("A4", "Construction"),12)
+
+Payload = rep(c("No Load", "Load"), each = 12)
+```
+
+
+```{r}
+# 2.1 ANOVA test
+threefactorial=data.frame(Distance, Block = factor(Block), PlaneType=factor(PlaneType),PaperType=factor(PaperType),Payload=factor(Payload))
+ANOVA = aov(Distance ~ Block + PlaneType*PaperType*Payload, threefactorial)
+summary(ANOVA)
+```
+
+
+```{r}
+
+PlaneType=factor(PlaneType)
+PaperType=factor(PaperType)
+Payload=factor(Payload)
+Payload=relevel(Payload, "No Load")
+```
+
+```{r}
+# Mean matrix
+meanvec=numeric(8)
+count=1
+for(i in c("Basic Dart","Stable")) {
+        for (k in c("No Load", "Load")) {
+           for(j in c("A4","Construction")) {
+           meanvec[count]=  mean(Distance[PlaneType==i & PaperType==j & Payload==k]) 
+           count = count +1
+           }     
+        }
+}
+meanmat=matrix(meanvec,2,4,byrow=T)
+
+colnames(meanmat)=c("PaperType=A4,Payload=No Load","PaperType=Construction,Payload=No Load",
+                   "PaperType=A4,Payload=Load","PaperType=Construction,Payload=Load")
+        rownames(meanmat)=c("PlaneType=Basic Dart","PlaneType=Sprinter")
+meanmat
+```
+
+```{r}
+# 2.2 Assumption Checking
+
+# 2.2.1 Normality assumption check
+res=ANOVA$residuals
+qqnorm(res)
+qqline(res)
+fits=ANOVA$fitted.values
+```
+
+```{r}
+# 2.2.2 Constant variance assumption check
+par(mfrow=c(2,2))
+plot(fits,res, xlab="Fitted Flight Distances",ylab="Residuals",
+     main="Residuals vs. Fitted Flight Distances")
+
+stripchart(res~PlaneType,vertical=T,xlab="Plane Type",ylab="Flight Distances",
+           main="Residuals vs. PlaneType")
+stripchart(res~PaperType,vertical=T,xlab="Paper Type",ylab="Flight Distances",
+           main="Residuals vs. Paper Type") 
+stripchart(res~Payload,vertical=T,xlab="Payload",ylab="Flight Distances",
+           main="Residuals vs. Payload")
+par(mfrow=c(1,1))
+```
+
+
+```{r}
+# 2.3 Two factor interactions
+par(mfrow=c(1,3))
+
+PlaneType=factor(PlaneType)
+PaperType=factor(PaperType)
+Payload=factor(Payload)
+
+interaction.plot(PlaneType,PaperType,Distance,type="b",main="PlaneType:PaperType",col=c("Red","blue"))
+interaction.plot(PlaneType,Payload,Distance,type="b",main="PlaneType:Payload",col=c("Red","blue"))
+interaction.plot(PaperType,Payload,Distance,type="b",main="PaperType:Payload",col=c("Red","blue"))
+par(mfrow=c(1,1))
+```
+
+```{r}
+# AB Contrast for A for each level of B
+a=2
+b=2
+c=2
+n=3
+mse=12.1
+dfe=(a*b*c-1)*(n-1)
+alpha=.05
+tmult=qt(1-alpha/(6), dfe)
+t=numeric(2)
+tmultnames=numeric(2)
+t[1] = mean(c(meanmat[1,1],meanmat[1,3])) - mean(c(meanmat[2,1],meanmat[2,3])); tmultnames[1]=paste0("Paper Type=A4,           Basic Dart - Stable")
+t[2] = mean(c(meanmat[1,2],meanmat[1,4])) - mean(c(meanmat[2,2],meanmat[2,4])); tmultnames[2]=paste0("Paper Type=Construction, Basic Dart - Stable")
+se=sqrt(mse*(1/(2*n)+1/(2*n)))
+lower=t-tmult*se
+upper=t+tmult*se
+t_out = cbind(lower,t,upper)
+rownames(t_out) = tmultnames
+t_out
+```
+
+
+
+```{r}
+# AC Contrast for A for each level of C
+a=2
+b=2
+c=2
+n=3
+mse=12.1
+dfe=(a*b*c-1)*(n-1)
+alpha=.05
+tmult=qt(1-alpha/(6), dfe)
+t=numeric(2)
+tmultnames=numeric(2)
+t[1] = mean(c(meanmat[1,1],meanmat[1,2])) - mean(c(meanmat[2,1],meanmat[2,2])); tmultnames[1]=paste0("Payload=No Load,    Basic Dart - Stable")
+t[2] = mean(c(meanmat[1,3],meanmat[1,4])) - mean(c(meanmat[2,3],meanmat[2,4])); tmultnames[2]=paste0("Payload=Load,       Basic Dart - Stable")
+se=sqrt(mse*(1/(2*n)+1/(2*n)))
+lower=t-tmult*se
+upper=t+tmult*se
+t_out = cbind(lower,t,upper)
+rownames(t_out) = tmultnames
+t_out
+```
+
+
+```{r}
+# CB Contrast for C for each level of B
+a=2
+b=2
+c=2
+n=3
+mse=12.1
+dfe=(a*b*c-1)*(n-1)
+alpha=.05
+tmult=qt(1-alpha/(6), dfe)
+t=numeric(2)
+tmultnames=numeric(2)
+t[1] = mean(c(meanmat[1,1],meanmat[2,1])) - mean(c(meanmat[1,3],meanmat[2,3])); tmultnames[1]=paste0("PaperType=A4,              No Load - Load")
+t[2] = mean(c(meanmat[1,2],meanmat[2,2])) - mean(c(meanmat[1,4],meanmat[2,4])); tmultnames[2]=paste0("PaperType=Construction,    No Load - Load")
+se=sqrt(mse*(1/(2*n)+1/(2*n)))
+lower=t-tmult*se
+upper=t+tmult*se
+t_out = cbind(lower,t,upper)
+rownames(t_out) = tmultnames
+t_out
+```
+
+
+```{r}
+# 2.5 Data snooping
+meanmat
+```
+
+```{r}
+# Compare PlaneType = Basic Dart, PaperType = A4, Payload = No Load combination to PlaneType = Basic Dart, PaperType = A4, Payload = Load combination
+
+#Scheffe
+a=2; b=2; c=2; n=3 # where n is the number of blocks
+mse=12.1
+dfe=(a*b*c-1)*(n-1)
+sch=sqrt((a*b*c-1)*qf(1-alpha,a*b*c-1,dfe)) 
+bestone=mean(with(threefactorial,Distance[PlaneType=="Basic Dart" & PaperType=="A4" & Payload=="No Load"]))
+secondbest=mean(with(threefactorial,Distance[PlaneType=="Basic Dart" & PaperType=="A4" & Payload=="Load"]))
+pe=bestone-secondbest
+se=sqrt(2*mse/n)
+c(pe-sch*se, pe, pe+sch*se)
+```
+
+
+```{r}
+# 2.6 Relative efficiency calculation
+a <- 8 # a is the number of treatments
+b <- 3 # b is the number of blocks
+
+ms_block <- 0.5
+mse <- 12.1
+var_rbd <- mse
+var_crd <- (((b-1)*ms_block) + (b*(a-1)*mse))/((a*b)-1)
+dfe_rbd <- (a-1)*(b-1)
+dfe_crd <- a*(b-1)
+cf <- ((dfe_rbd +1)*(dfe_crd +3))/((dfe_rbd + 3)*(dfe_crd + 1))
+RE <- (cf*var_crd)/(var_rbd)
+RE
+```
+
+
